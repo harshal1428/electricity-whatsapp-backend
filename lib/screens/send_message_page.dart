@@ -1,9 +1,27 @@
 import 'dart:convert';
+import 'dart:io' show SocketException, Platform;
+import 'dart:async' show TimeoutException;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+// Edit this if your backend is hosted elsewhere.
 const String BASE_URL = 'http://localhost:3002';
+
+// Effective base URL: for Android emulators 'localhost' should be replaced
+// with 10.0.2.2. We keep `BASE_URL` as the editable constant above and
+// automatically fall back when running on Android to help during development.
+String get _effectiveBaseUrl {
+  try {
+    if (Platform.isAndroid && BASE_URL.contains('localhost')) {
+      return BASE_URL.replaceFirst('localhost', '10.0.2.2');
+    }
+  } catch (_) {
+    // Platform isn't available (e.g. web) — fall back to BASE_URL
+  }
+  return BASE_URL;
+}
 
 class SendMessagePage extends StatefulWidget {
   const SendMessagePage({super.key});
@@ -42,18 +60,36 @@ class _SendMessagePageState extends State<SendMessagePage> {
   Future<void> _fetchPincodes() async {
     setState(() => _loading = true);
     try {
-      final res = await http.get(Uri.parse('$BASE_URL/pincodes'));
+      final url = '$_effectiveBaseUrl/pincodes';
+      debugPrint('Fetching pincodes from: $url');
+  final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+
+      debugPrint('Response status: ${res.statusCode}');
+      debugPrint('Response body: ${res.body}');
+
       if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = _extractStringList(body);
-        setState(() {
-          _pincodes = list;
-        });
+        try {
+          final body = jsonDecode(res.body);
+          final list = _extractStringList(body);
+          setState(() {
+            _pincodes = list;
+          });
+        } catch (e) {
+          debugPrint('JSON parse error for pincodes: $e');
+          _showSnackBar('Failed to parse pincodes response');
+        }
       } else {
-        _showSnackBar('Failed to load pincodes (${res.statusCode})');
+        _showSnackBar('Failed to load pincodes (${res.statusCode}): ${res.body}');
       }
-    } catch (e) {
-      _showSnackBar('Failed to load pincodes');
+    } on SocketException catch (e) {
+      debugPrint('SocketException while fetching pincodes: $e');
+      _showSnackBar('No internet connection or server unreachable');
+    } on TimeoutException catch (e) {
+      debugPrint('Timeout while fetching pincodes: $e');
+      _showSnackBar('Request timed out while loading pincodes');
+    } catch (e, st) {
+      debugPrint('Error fetching pincodes: $e\n$st');
+      _showSnackBar('Failed to load pincodes: $e');
     } finally {
       setState(() => _loading = false);
     }
@@ -62,18 +98,36 @@ class _SendMessagePageState extends State<SendMessagePage> {
   Future<void> _fetchAreas(String pincode) async {
     setState(() => _loading = true);
     try {
-      final res = await http.get(Uri.parse('$BASE_URL/areas?pincode=$pincode'));
+      final url = '$_effectiveBaseUrl/areas?pincode=${Uri.encodeQueryComponent(pincode)}';
+      debugPrint('Fetching areas from: $url');
+  final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+
+      debugPrint('Response status: ${res.statusCode}');
+      debugPrint('Response body: ${res.body}');
+
       if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = _extractStringList(body);
-        setState(() {
-          _areas = list;
-        });
+        try {
+          final body = jsonDecode(res.body);
+          final list = _extractStringList(body);
+          setState(() {
+            _areas = list;
+          });
+        } catch (e) {
+          debugPrint('JSON parse error for areas: $e');
+          _showSnackBar('Failed to parse areas response');
+        }
       } else {
-        _showSnackBar('Failed to load areas (${res.statusCode})');
+        _showSnackBar('Failed to load areas (${res.statusCode}): ${res.body}');
       }
-    } catch (e) {
-      _showSnackBar('Failed to load areas');
+    } on SocketException catch (e) {
+      debugPrint('SocketException while fetching areas: $e');
+      _showSnackBar('No internet connection or server unreachable');
+    } on TimeoutException catch (e) {
+      debugPrint('Timeout while fetching areas: $e');
+      _showSnackBar('Request timed out while loading areas');
+    } catch (e, st) {
+      debugPrint('Error fetching areas: $e\n$st');
+      _showSnackBar('Failed to load areas: $e');
     } finally {
       setState(() => _loading = false);
     }
@@ -82,19 +136,36 @@ class _SendMessagePageState extends State<SendMessagePage> {
   Future<void> _fetchTransformers(String area) async {
     setState(() => _loading = true);
     try {
-      final res =
-          await http.get(Uri.parse('$BASE_URL/transformers?area=${Uri.encodeQueryComponent(area)}'));
+      final url = '$_effectiveBaseUrl/transformers?area=${Uri.encodeQueryComponent(area)}';
+      debugPrint('Fetching transformers from: $url');
+  final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+
+      debugPrint('Response status: ${res.statusCode}');
+      debugPrint('Response body: ${res.body}');
+
       if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = _extractStringList(body);
-        setState(() {
-          _transformers = list;
-        });
+        try {
+          final body = jsonDecode(res.body);
+          final list = _extractStringList(body);
+          setState(() {
+            _transformers = list;
+          });
+        } catch (e) {
+          debugPrint('JSON parse error for transformers: $e');
+          _showSnackBar('Failed to parse transformers response');
+        }
       } else {
-        _showSnackBar('Failed to load transformers (${res.statusCode})');
+        _showSnackBar('Failed to load transformers (${res.statusCode}): ${res.body}');
       }
-    } catch (e) {
-      _showSnackBar('Failed to load transformers');
+    } on SocketException catch (e) {
+      debugPrint('SocketException while fetching transformers: $e');
+      _showSnackBar('No internet connection or server unreachable');
+    } on TimeoutException catch (e) {
+      debugPrint('Timeout while fetching transformers: $e');
+      _showSnackBar('Request timed out while loading transformers');
+    } catch (e, st) {
+      debugPrint('Error fetching transformers: $e\n$st');
+      _showSnackBar('Failed to load transformers: $e');
     } finally {
       setState(() => _loading = false);
     }
@@ -142,14 +213,22 @@ class _SendMessagePageState extends State<SendMessagePage> {
         'message': message,
       });
 
-      final res = await http.post(Uri.parse('$BASE_URL/send-message'),
-          headers: {'Content-Type': 'application/json'}, body: body);
+      final url = '$_effectiveBaseUrl/send-message';
+      debugPrint('POST to $url with body: $body');
+
+    final res = await http
+      .post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: body)
+      .timeout(const Duration(seconds: 10));
+
+      debugPrint('Send response status: ${res.statusCode}');
+      debugPrint('Send response body: ${res.body}');
 
       if (res.statusCode == 200) {
         dynamic jsonBody;
         try {
           jsonBody = jsonDecode(res.body);
-        } catch (_) {
+        } catch (e) {
+          debugPrint('Failed to parse send response: $e');
           jsonBody = null;
         }
 
@@ -169,10 +248,17 @@ class _SendMessagePageState extends State<SendMessagePage> {
         // Reset only message field after success
         _messageController.clear();
       } else {
-        _showSnackBar('Failed to send message (${res.statusCode})');
+        _showSnackBar('Failed to send message (${res.statusCode}): ${res.body}');
       }
-    } catch (e) {
-      _showSnackBar('Failed to send message');
+    } on SocketException catch (e) {
+      debugPrint('SocketException while sending message: $e');
+      _showSnackBar('No internet connection or server unreachable');
+    } on TimeoutException catch (e) {
+      debugPrint('Timeout while sending message: $e');
+      _showSnackBar('Request timed out while sending message');
+    } catch (e, st) {
+      debugPrint('Error sending message: $e\n$st');
+      _showSnackBar('Failed to send message: $e');
     } finally {
       setState(() => _sending = false);
     }
